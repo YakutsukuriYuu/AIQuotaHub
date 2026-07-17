@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(AIQuotaHub VERSION 0.1.0 LANGUAGES CXX)
-
-if(APPLE)
-    enable_language(OBJCXX)
-endif()
+project(AIQuotaHub VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,6 +22,7 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/core/ProvidersConfig.h
     src/core/ProvidersConfig.cpp
     src/core/CredentialStore.h
+    src/core/CredentialStore.cpp
     src/providers/GlmParser.h
     src/providers/GlmParser.cpp
     src/providers/GenericBalanceParser.h
@@ -59,13 +56,12 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/ui/TrayIcon.cpp
 )
 
-if(APPLE)
-    target_sources(AIQuotaHub PRIVATE src/core/CredentialStore.mm)
-    target_link_libraries(AIQuotaHub PRIVATE
-        "-framework Security"
-        "-framework CoreFoundation"
-    )
-endif()
+set_target_properties(AIQuotaHub PROPERTIES
+    MACOSX_BUNDLE_GUI_IDENTIFIER "app.aiquotahub"
+    MACOSX_BUNDLE_BUNDLE_NAME "AI Quota Hub"
+    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+)
 
 # providers.json 打进 App 包 Resources（用户可在 Application Support 放同名文件覆盖）
 set(PROVIDERS_JSON ${CMAKE_CURRENT_SOURCE_DIR}/resources/providers.json)

@@ -15,7 +15,7 @@ DeepSeekProvider::DeepSeekProvider(ProviderConfig config, QObject *parent)
 
 void DeepSeekProvider::fetch()
 {
-    const QString apiKey = CredentialStore::read(QStringLiteral("AIQuotaHub.deepseek"),
+    const QString apiKey = CredentialStore::read(credentialServiceFor(m_config.id),
                                                  m_config.credentialKey);
     if (apiKey.isEmpty()) {
         ProviderSnapshot snapshot;

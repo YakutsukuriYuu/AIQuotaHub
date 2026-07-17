@@ -11,3 +11,9 @@ public:
     static QString read(const QString &service, const QString &account);
     static bool remove(const QString &service, const QString &account);
 };
+
+// 统一的钥匙串 service 命名："AIQuotaHub.<providerId>"
+inline QString credentialServiceFor(const QString &providerId)
+{
+    return QStringLiteral("AIQuotaHub.") + providerId;
+}

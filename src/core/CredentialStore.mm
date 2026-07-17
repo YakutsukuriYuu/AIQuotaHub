@@ -61,9 +61,12 @@ QString CredentialStore::read(const QString &service, const QString &account)
     if (status != errSecSuccess || !result)
         return {};
 
-    NSData *data = (__bridge_transfer NSData *)result;
-    return QString::fromNSString([[NSString alloc] initWithData:data
-                                                       encoding:NSUTF8StringEncoding]);
+    // 非 ARC 环境需手动释放：先桥接取值，再 CFRelease
+    NSData *data = (__bridge NSData *)result;
+    QString value = QString::fromNSString([[NSString alloc] initWithData:data
+                                                                encoding:NSUTF8StringEncoding]);
+    CFRelease(result);
+    return value;
 }
 
 bool CredentialStore::remove(const QString &service, const QString &account)

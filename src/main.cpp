@@ -1,20 +1,16 @@
+#include "ui/MainWindow.h"
+
 #include <QApplication>
-#include <QLabel>
-#include <QMainWindow>
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName("AIQuotaHub");
-    QApplication::setOrganizationName("AIQuotaHub");
+    QApplication::setApplicationName(QStringLiteral("AIQuotaHub"));
+    QApplication::setOrganizationName(QStringLiteral("AIQuotaHub"));
+    QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QApplication::setQuitOnLastWindowClosed(false);   // 关窗驻留托盘
 
-    QMainWindow window;
-    window.setWindowTitle(QStringLiteral("AI Quota Hub"));
-
-    auto *placeholder = new QLabel(QStringLiteral("AI Quota Hub — 项目骨架就绪"));
-    placeholder->setAlignment(Qt::AlignCenter);
-    window.setCentralWidget(placeholder);
-    window.resize(960, 640);
+    MainWindow window;
     window.show();
 
     return QApplication::exec();

@@ -36,6 +36,17 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/providers/DeepSeekProvider.cpp
     src/providers/DemoProvider.h
     src/providers/DemoProvider.cpp
+    src/core/RefreshScheduler.h
+    src/core/RefreshScheduler.cpp
+    src/ui/UiColors.h
+    src/ui/ProviderCard.h
+    src/ui/ProviderCard.cpp
+    src/ui/MainWindow.h
+    src/ui/MainWindow.cpp
+    src/ui/SettingsDialog.h
+    src/ui/SettingsDialog.cpp
+    src/ui/TrayIcon.h
+    src/ui/TrayIcon.cpp
 )
 
 if(APPLE)

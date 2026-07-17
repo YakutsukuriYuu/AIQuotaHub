@@ -45,6 +45,10 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/core/RefreshScheduler.h
     src/core/RefreshScheduler.cpp
     src/ui/UiColors.h
+    src/ui/Theme.h
+    src/ui/Theme.cpp
+    src/ui/RingProgress.h
+    src/ui/RingProgress.cpp
     src/ui/ProviderCard.h
     src/ui/ProviderCard.cpp
     src/ui/MainWindow.h

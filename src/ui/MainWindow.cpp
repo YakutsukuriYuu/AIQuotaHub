@@ -5,6 +5,7 @@
 #include "../core/RefreshScheduler.h"
 #include "ProviderCard.h"
 #include "SettingsDialog.h"
+#include "Theme.h"
 #include "TrayIcon.h"
 
 #include <QAction>
@@ -16,6 +17,7 @@
 #include <QListWidget>
 #include <QScrollArea>
 #include <QSettings>
+#include <QStyleHints>
 #include <QToolBar>
 #include <utility>
 
@@ -51,6 +53,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     QSettings settings;
     restoreGeometry(settings.value(QStringLiteral("ui/geometry")).toByteArray());
+
+    // 系统外观切换（明/暗）时实时换肤
+    connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged,
+            this, &MainWindow::applyThemeToUi);
 
     m_scheduler->refreshAll();
 }
@@ -189,6 +195,13 @@ void MainWindow::updateTraySummary()
         }
     }
     m_tray->setStatus(worst, lines);
+}
+
+void MainWindow::applyThemeToUi()
+{
+    qApp->setStyleSheet(Theme::appStyleSheet());
+    for (ProviderCard *card : std::as_const(m_cards))
+        card->applyTheme();
 }
 
 void MainWindow::openSettings()

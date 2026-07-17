@@ -28,6 +28,7 @@ private:
     void onSnapshot(const ProviderSnapshot &snapshot);
     void openSettings();
     void updateTraySummary();
+    void applyThemeToUi();     // 系统明暗切换后重刷全局样式和卡片
 
     ProviderManager *m_manager = nullptr;
     RefreshScheduler *m_scheduler = nullptr;

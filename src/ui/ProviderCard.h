@@ -3,11 +3,12 @@
 #include "../core/Models.h"
 
 #include <QFrame>
+#include <optional>
 
 class QLabel;
 class QVBoxLayout;
 
-// 单个提供商的仪表盘卡片：配额进度条 + API 余额 + 状态着色
+// 单个提供商的仪表盘卡片：左侧状态色条 + 圆环进度 + API 余额 + hover 提亮
 class ProviderCard : public QFrame
 {
     Q_OBJECT
@@ -16,10 +17,14 @@ public:
 
     void showLoading();
     void updateSnapshot(const ProviderSnapshot &snapshot);
+    void applyTheme();   // 主题切换后重刷样式并重绘
 
 private:
-    QWidget *buildQuotaRow(const QuotaWindow &quota);
+    QWidget *buildQuotaRing(const QuotaWindow &quota);
+    void setStatusColor(const QColor &color);
 
-    QLabel *m_statusLabel = nullptr;      // 右上角：最近更新时间
-    QVBoxLayout *m_bodyLayout = nullptr;  // 动态内容区
+    std::optional<ProviderSnapshot> m_snapshot;   // 主题切换时重绘用
+    QFrame *m_statusBar = nullptr;                // 左侧状态色条
+    QLabel *m_statusLabel = nullptr;              // 右上角：最近更新时间
+    QVBoxLayout *m_bodyLayout = nullptr;
 };

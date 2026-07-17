@@ -1,0 +1,42 @@
+{
+  "providers": [
+    {
+      "id": "glm",
+      "name": "GLM 智谱",
+      "type": "http",
+      "enabled": true,
+      "endpoint": "https://open.bigmodel.cn/api/monitor/usage/quota/limit",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer ",
+      "credentialKey": "apiKey",
+      "refreshIntervalSec": 120,
+      "supportsQuota": true,
+      "supportsApiUsage": false,
+      "fields": {
+        "limitsArray": "data.limits"
+      }
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "type": "http",
+      "enabled": true,
+      "endpoint": "https://api.deepseek.com/user/balance",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer ",
+      "credentialKey": "apiKey",
+      "refreshIntervalSec": 300,
+      "supportsQuota": false,
+      "supportsApiUsage": true
+    },
+    {
+      "id": "demo",
+      "name": "Demo 演示",
+      "type": "demo",
+      "enabled": true,
+      "refreshIntervalSec": 60,
+      "supportsQuota": true,
+      "supportsApiUsage": true
+    }
+  ]
+}

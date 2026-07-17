@@ -1,0 +1,25 @@
+{
+  "code": 200,
+  "msg": "success",
+  "data": {
+    "limits": [
+      {
+        "type": "TIME_LIMIT",
+        "unit": 5,
+        "currentValue": 32,
+        "limitValue": 80,
+        "remaining": 48,
+        "percentage": 40,
+        "nextResetTime": 1752847200000
+      },
+      {
+        "type": "WEEK_LIMIT",
+        "currentValue": 210,
+        "limitValue": 600,
+        "remaining": 390,
+        "percentage": 35,
+        "nextResetTime": 1753192800000
+      }
+    ]
+  }
+}

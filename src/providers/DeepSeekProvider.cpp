@@ -1,0 +1,41 @@
+#include "DeepSeekProvider.h"
+
+#include "../core/CredentialStore.h"
+#include "../core/HttpJsonClient.h"
+#include "DeepSeekParser.h"
+
+#include <utility>
+
+DeepSeekProvider::DeepSeekProvider(ProviderConfig config, QObject *parent)
+    : Provider(parent)
+    , m_config(std::move(config))
+    , m_http(new HttpJsonClient(this))
+{
+}
+
+void DeepSeekProvider::fetch()
+{
+    const QString apiKey = CredentialStore::read(QStringLiteral("AIQuotaHub.deepseek"),
+                                                 m_config.credentialKey);
+    if (apiKey.isEmpty()) {
+        ProviderSnapshot snapshot;
+        snapshot.providerId = m_config.id;
+        snapshot.fetchedAt = QDateTime::currentDateTime();
+        snapshot.error = QStringLiteral("未配置 API Key（在设置页填写）");
+        emit finished(snapshot);
+        return;
+    }
+
+    m_http->get(QUrl(m_config.endpoint), m_config.authHeader, m_config.authPrefix + apiKey,
+                [this](const QJsonDocument &doc, const QString &error) {
+        if (!error.isEmpty()) {
+            ProviderSnapshot snapshot;
+            snapshot.providerId = m_config.id;
+            snapshot.fetchedAt = QDateTime::currentDateTime();
+            snapshot.error = error;
+            emit finished(snapshot);
+            return;
+        }
+        emit finished(parseDeepSeekBalance(doc.toJson()));
+    });
+}

@@ -3,8 +3,7 @@
 add_executable(test_parsers
     test_parsers.cpp
     ${CMAKE_SOURCE_DIR}/src/providers/GlmParser.cpp
-    ${CMAKE_SOURCE_DIR}/src/providers/DeepSeekParser.cpp
-    ${CMAKE_SOURCE_DIR}/src/providers/MoonshotParser.cpp
+    ${CMAKE_SOURCE_DIR}/src/providers/GenericBalanceParser.cpp
     ${CMAKE_SOURCE_DIR}/src/providers/OpenAiCostsParser.cpp
     ${CMAKE_SOURCE_DIR}/src/providers/CustomJsonParser.cpp
 )

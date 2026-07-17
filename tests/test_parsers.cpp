@@ -1,9 +1,8 @@
 #include <QtTest>
 
 #include "providers/CustomJsonParser.h"
-#include "providers/DeepSeekParser.h"
+#include "providers/GenericBalanceParser.h"
 #include "providers/GlmParser.h"
-#include "providers/MoonshotParser.h"
 #include "providers/OpenAiCostsParser.h"
 
 class TestParsers : public QObject
@@ -27,13 +26,11 @@ private slots:
     void glm_rejectsErrorCode();
     void glm_skipsMalformedEntries();
 
-    // ---- DeepSeek 余额模板 ----
-    void deepseek_parsesBalance();
-    void deepseek_rejectsMissingInfos();
-
-    // ---- Kimi(Moonshot) 余额模板 ----
-    void moonshot_parsesBalance();
-    void moonshot_rejectsErrorCode();
+    // ---- 通用余额模板（自动识别 DeepSeek / Moonshot 形态） ----
+    void genericBalance_parsesDeepSeekShape();
+    void genericBalance_rejectsMissingInfos();
+    void genericBalance_parsesMoonshotShape();
+    void genericBalance_rejectsErrorCode();
 
     // ---- OpenAI 费用模板 ----
     void openai_sumsBuckets();
@@ -102,12 +99,12 @@ void TestParsers::glm_skipsMalformedEntries()
     QCOMPARE(snapshot.quotas.at(0).limit, 50.0);
 }
 
-void TestParsers::deepseek_parsesBalance()
+void TestParsers::genericBalance_parsesDeepSeekShape()
 {
     const QByteArray body = fixture(QStringLiteral("deepseek_balance.json"));
     QVERIFY2(!body.isEmpty(), "夹具 deepseek_balance.json 缺失");
 
-    const ProviderSnapshot snapshot = parseDeepSeekBalance(body, QStringLiteral("deepseek"));
+    const ProviderSnapshot snapshot = parseGenericBalance(body, {}, QStringLiteral("deepseek"));
     QVERIFY2(snapshot.ok(), qPrintable(snapshot.error));
     QVERIFY(snapshot.api.has_value());
     QCOMPARE(snapshot.api->currency, QStringLiteral("CNY"));
@@ -117,19 +114,19 @@ void TestParsers::deepseek_parsesBalance()
     QCOMPARE(snapshot.worstQuotaPercent(), -1.0);
 }
 
-void TestParsers::deepseek_rejectsMissingInfos()
+void TestParsers::genericBalance_rejectsMissingInfos()
 {
     const ProviderSnapshot snapshot =
-        parseDeepSeekBalance(R"({"is_available": true})", QStringLiteral("deepseek"));
+        parseGenericBalance(R"({"is_available": true})", {}, QStringLiteral("deepseek"));
     QVERIFY(!snapshot.ok());
 }
 
-void TestParsers::moonshot_parsesBalance()
+void TestParsers::genericBalance_parsesMoonshotShape()
 {
     const QByteArray body = fixture(QStringLiteral("kimi_balance.json"));
     QVERIFY2(!body.isEmpty(), "夹具 kimi_balance.json 缺失");
 
-    const ProviderSnapshot snapshot = parseMoonshotBalance(body, QStringLiteral("kimi"));
+    const ProviderSnapshot snapshot = parseGenericBalance(body, {}, QStringLiteral("kimi"));
     QVERIFY2(snapshot.ok(), qPrintable(snapshot.error));
     QVERIFY(snapshot.api.has_value());
     QCOMPARE(snapshot.api->balance, 56.90);
@@ -137,11 +134,11 @@ void TestParsers::moonshot_parsesBalance()
     QVERIFY(snapshot.api->note.contains(QStringLiteral("代金券")));
 }
 
-void TestParsers::moonshot_rejectsErrorCode()
+void TestParsers::genericBalance_rejectsErrorCode()
 {
     const QByteArray body =
         R"({"code": 5, "message": "Invalid Authentication", "status": false})";
-    const ProviderSnapshot snapshot = parseMoonshotBalance(body, QStringLiteral("kimi"));
+    const ProviderSnapshot snapshot = parseGenericBalance(body, {}, QStringLiteral("kimi"));
     QVERIFY(!snapshot.ok());
     QVERIFY(snapshot.error.contains(QStringLiteral("Invalid Authentication")));
 }

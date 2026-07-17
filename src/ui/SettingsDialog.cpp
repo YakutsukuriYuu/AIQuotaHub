@@ -4,6 +4,7 @@
 #include "../core/ProviderManager.h"
 #include "../providers/HttpProvider.h"
 #include "AddProviderDialog.h"
+#include "Theme.h"
 
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -51,9 +52,12 @@ SettingsDialog::SettingsDialog(ProviderManager *manager, QWidget *parent)
     layout->addLayout(bottomBar);
 
     rebuildRows();
-    // 管理器数据变化（启停/增删）时同步刷新行
+    // 管理器数据变化（启停/增删）时同步刷新行。
+    // 必须排队连接：启停复选框/删除按钮就在行内，若在它们自己的信号处理链中
+    // 同步删除行（=删除发送者本身），信号发射返回到已释放对象 → 闪退。
+    // 排队到下一轮事件循环执行，此时控件事件已处理完毕。
     connect(m_manager, &ProviderManager::providersChanged,
-            this, &SettingsDialog::rebuildRows);
+            this, &SettingsDialog::rebuildRows, Qt::QueuedConnection);
 }
 
 void SettingsDialog::rebuildRows()
@@ -74,9 +78,12 @@ QWidget *SettingsDialog::buildRow(const ProviderConfig &config)
 {
     auto *row = new QFrame;
     row->setObjectName(QStringLiteral("providerRow"));
+    // 用主题 token 而不是 palette(mid)：暗色下对比度才有保证
+    const ThemePalette theme = Theme::current();
     row->setStyleSheet(QStringLiteral(
-        "QFrame#providerRow { border: 1px solid palette(mid); border-radius: 8px; }"
-        "QLabel#muted { color: palette(mid); }"));
+        "QFrame#providerRow { background: %1; border: 1px solid %2; border-radius: 8px; }"
+        "QLabel#muted { color: %3; }")
+        .arg(theme.cardBg.name(), theme.border.name(), theme.textSecondary.name()));
     auto *h = new QHBoxLayout(row);
     h->setContentsMargins(10, 6, 10, 6);
 

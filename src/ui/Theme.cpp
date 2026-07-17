@@ -41,7 +41,7 @@ QString Theme::appStyleSheet()
     const ThemePalette t = current();
     return QStringLiteral(R"(
 QMainWindow, QDialog { background: %1; }
-QWidget { color: %2; font-size: 13px; }
+QWidget { color: %2; }
 QToolBar { background: %1; border: none; spacing: 8px; padding: 4px; }
 QToolBar QToolButton { color: %2; background: transparent; border-radius: 6px; padding: 4px 10px; }
 QToolBar QToolButton:hover { background: %3; }

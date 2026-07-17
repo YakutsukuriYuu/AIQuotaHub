@@ -15,19 +15,27 @@
 
 namespace {
 
-// 各模板的默认接口地址（选模板时自动预填）
+// 各模板默认接口地址（选模板时预填；余额型格式通用，只给示例不预填）
 QString defaultEndpointFor(const QString &parserTemplate)
 {
-    if (parserTemplate == QStringLiteral("glm_quota"))
+    if (parserTemplate == QStringLiteral("quota_windows"))
         return QStringLiteral("https://open.bigmodel.cn/api/monitor/usage/quota/limit");
-    if (parserTemplate == QStringLiteral("deepseek_balance"))
-        return QStringLiteral("https://api.deepseek.com/user/balance");
-    if (parserTemplate == QStringLiteral("moonshot_balance"))
-        return QStringLiteral("https://api.moonshot.cn/v1/users/me/balance");
     if (parserTemplate == QStringLiteral("openai_costs"))
         return QStringLiteral(
             "https://api.openai.com/v1/organization/costs?start_time={month_start}");
     return {};
+}
+
+// 各模板 URL 输入框的占位提示
+QString endpointPlaceholderFor(const QString &parserTemplate)
+{
+    if (parserTemplate == QStringLiteral("balance_json"))
+        return QStringLiteral("https://…（例如 https://api.deepseek.com/user/balance）");
+    if (parserTemplate == QStringLiteral("quota_windows"))
+        return QStringLiteral("配额查询接口地址");
+    if (parserTemplate == QStringLiteral("openai_costs"))
+        return QStringLiteral("OpenAI 兼容的用量/费用接口地址");
+    return QStringLiteral("https://…");
 }
 
 // custom_json 高级区暴露的字段映射键
@@ -120,6 +128,7 @@ void AddProviderDialog::buildUi()
     connect(m_templateCombo, &QComboBox::currentIndexChanged, this, [this](int) {
         const QString t = m_templateCombo->currentData().toString();
         m_customFieldsBox->setVisible(t == QStringLiteral("custom_json"));
+        m_endpointEdit->setPlaceholderText(endpointPlaceholderFor(t));
         // 端点为空或仍是某模板默认值时，跟随模板预填
         const QString current = m_endpointEdit->text().trimmed();
         bool isKnownDefault = current.isEmpty();
@@ -144,8 +153,13 @@ void AddProviderDialog::buildUi()
     layout->addWidget(buttons);
 
     // 添加模式下端点先按默认模板预填
-    if (!m_editMode && m_endpointEdit->text().isEmpty())
-        m_endpointEdit->setText(defaultEndpointFor(m_templateCombo->currentData().toString()));
+    if (!m_editMode) {
+        m_endpointEdit->setPlaceholderText(
+            endpointPlaceholderFor(m_templateCombo->currentData().toString()));
+        if (m_endpointEdit->text().isEmpty())
+            m_endpointEdit->setText(
+                defaultEndpointFor(m_templateCombo->currentData().toString()));
+    }
 }
 
 void AddProviderDialog::accept()
@@ -182,8 +196,10 @@ ProviderConfig AddProviderDialog::config() const
     config.refreshIntervalSec = m_intervalSpin->value();
 
     const bool isCustom = config.parserTemplate == QStringLiteral("custom_json");
-    config.supportsQuota = config.parserTemplate == QStringLiteral("glm_quota") || isCustom;
-    config.supportsApiUsage = config.parserTemplate != QStringLiteral("glm_quota");
+    config.supportsQuota = config.parserTemplate == QStringLiteral("quota_windows")
+                           || config.parserTemplate == QStringLiteral("glm_quota")
+                           || isCustom;
+    config.supportsApiUsage = !config.supportsQuota || isCustom;
 
     if (isCustom) {
         QJsonObject fields;

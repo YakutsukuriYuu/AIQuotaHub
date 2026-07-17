@@ -3,9 +3,8 @@
 #include "../core/CredentialStore.h"
 #include "../core/HttpJsonClient.h"
 #include "CustomJsonParser.h"
-#include "DeepSeekParser.h"
+#include "GenericBalanceParser.h"
 #include "GlmParser.h"
-#include "MoonshotParser.h"
 #include "OpenAiCostsParser.h"
 
 #include <QDate>
@@ -20,17 +19,16 @@ HttpProvider::HttpProvider(ProviderConfig config, QObject *parent)
 
 QVector<QPair<QString, QString>> HttpProvider::availableTemplates()
 {
+    // 按"格式大类"呈现，不提具体厂商：同类格式的服务都能接入
     return {
-        {QStringLiteral("glm_quota"),
-         QStringLiteral("配额型 · GLM 智谱 Coding Plan 格式")},
-        {QStringLiteral("deepseek_balance"),
-         QStringLiteral("余额型 · DeepSeek 格式")},
-        {QStringLiteral("moonshot_balance"),
-         QStringLiteral("余额型 · Kimi / Moonshot 格式")},
+        {QStringLiteral("quota_windows"),
+         QStringLiteral("订阅配额型（5 小时 / 周额度窗口）")},
+        {QStringLiteral("balance_json"),
+         QStringLiteral("账户余额型（通用 JSON，自动识别常见结构）")},
         {QStringLiteral("openai_costs"),
-         QStringLiteral("费用型 · OpenAI organization/costs（需 Admin Key）")},
+         QStringLiteral("用量费用型（OpenAI 兼容格式）")},
         {QStringLiteral("custom_json"),
-         QStringLiteral("自定义 JSON 字段映射（高级）")},
+         QStringLiteral("自定义字段映射（高级）")},
     };
 }
 
@@ -59,13 +57,13 @@ QString HttpProvider::resolvedEndpoint() const
 
 ProviderSnapshot HttpProvider::parse(const QByteArray &body) const
 {
+    // 新模板 id + 旧 id 别名（兼容已保存的用户配置）
     const QString &t = m_config.parserTemplate;
-    if (t == QStringLiteral("glm_quota"))
+    if (t == QStringLiteral("quota_windows") || t == QStringLiteral("glm_quota"))
         return parseGlmQuotaResponse(body, m_config.fields, m_config.id);
-    if (t == QStringLiteral("deepseek_balance"))
-        return parseDeepSeekBalance(body, m_config.id);
-    if (t == QStringLiteral("moonshot_balance"))
-        return parseMoonshotBalance(body, m_config.id);
+    if (t == QStringLiteral("balance_json") || t == QStringLiteral("deepseek_balance")
+        || t == QStringLiteral("moonshot_balance"))
+        return parseGenericBalance(body, m_config.fields, m_config.id);
     if (t == QStringLiteral("openai_costs"))
         return parseOpenAiCosts(body, m_config.id);
     if (t == QStringLiteral("custom_json"))

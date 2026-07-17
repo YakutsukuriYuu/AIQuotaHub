@@ -81,9 +81,10 @@ QWidget *SettingsDialog::buildRow(const ProviderConfig &config)
     // 用主题 token 而不是 palette(mid)：暗色下对比度才有保证
     const ThemePalette theme = Theme::current();
     row->setStyleSheet(QStringLiteral(
-        "QFrame#providerRow { background: %1; border: 1px solid %2; border-radius: 8px; }"
+        "QFrame#providerRow { background: %1; border: 1px solid %2; border-radius: 10px; }"
         "QLabel#muted { color: %3; }")
-        .arg(theme.cardBg.name(), theme.border.name(), theme.textSecondary.name()));
+        .arg(Theme::css(theme.cardBg), Theme::css(theme.border),
+             Theme::css(theme.textSecondary)));
     auto *h = new QHBoxLayout(row);
     h->setContentsMargins(10, 6, 10, 6);
 

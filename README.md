@@ -26,7 +26,7 @@ macOS 桌面应用：一站式查看各家 AI 的**订阅额度**（5 小时窗 
 **自定义添加**：设置页「＋ 添加提供商」→ 选解析模板 → 填名称/URL/API Key/刷新间隔即可接入任意"Bearer Key + JSON"接口；`custom_json` 模板还可在高级区自定义 JSON 字段路径映射（quotasArray/used/limit/reset/balance/currency）。
 
 - 用户自建源保存在 `~/Library/Application Support/AIQuotaHub/providers.json`（可编辑/删除）
-- API Key 一律存 **macOS 钥匙串**，不落盘
+- API Key 保存在 `~/Library/Application Support/AIQuotaHub/credentials.json`（权限 600 仅本人可读；单机开源软件，不用钥匙串以免重编译后反复弹授权框）
 - 接口字段漂移时：模板源可改 JSON 里的 `fields` 覆盖，无需改代码
 
 ## 构建

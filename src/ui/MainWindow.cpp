@@ -7,19 +7,38 @@
 #include "SettingsDialog.h"
 #include "Theme.h"
 #include "TrayIcon.h"
+#include "UiColors.h"
 
-#include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
+#include <QPainter>
+#include <QPushButton>
 #include <QScrollArea>
 #include <QSettings>
 #include <QStyleHints>
-#include <QToolBar>
+#include <QVBoxLayout>
 #include <utility>
+
+namespace {
+
+// 侧栏状态点小圆点图标
+QIcon makeDotIcon(const QColor &color)
+{
+    QPixmap pixmap(20, 20);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.drawEllipse(4, 4, 12, 12);
+    return QIcon(pixmap);
+}
+
+} // namespace
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -27,7 +46,6 @@ MainWindow::MainWindow(QWidget *parent)
     , m_scheduler(new RefreshScheduler(this))
 {
     setWindowTitle(QStringLiteral("AI Quota Hub"));
-    setUnifiedTitleAndToolBarOnMac(true);
 
     buildUi();
 
@@ -63,34 +81,70 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::buildUi()
 {
-    auto *toolbar = addToolBar(QStringLiteral("main"));
-    toolbar->setMovable(false);
-    QAction *refreshAction = toolbar->addAction(QStringLiteral("刷新"));
-    connect(refreshAction, &QAction::triggered,
-            m_scheduler, &RefreshScheduler::refreshAll);
-    QAction *settingsAction = toolbar->addAction(QStringLiteral("设置"));
-    connect(settingsAction, &QAction::triggered, this, &MainWindow::openSettings);
-
     auto *central = new QWidget;
-    auto *rootLayout = new QHBoxLayout(central);
-    rootLayout->setContentsMargins(8, 8, 8, 8);
+    auto *rootLayout = new QVBoxLayout(central);
+    rootLayout->setContentsMargins(18, 14, 18, 14);
+    rootLayout->setSpacing(14);
+
+    // ---- 头部栏：标题 + 副标题 | 刷新 / 设置 ----
+    auto *header = new QHBoxLayout;
+    auto *titleBox = new QVBoxLayout;
+    titleBox->setSpacing(2);
+    auto *title = new QLabel(QStringLiteral("数据总览"));
+    title->setObjectName(QStringLiteral("appHeaderTitle"));
+    m_headerSubtitle = new QLabel;
+    m_headerSubtitle->setObjectName(QStringLiteral("appHeaderSubtitle"));
+    titleBox->addWidget(title);
+    titleBox->addWidget(m_headerSubtitle);
+    header->addLayout(titleBox);
+    header->addStretch();
+
+    m_refreshButton = new QPushButton(QStringLiteral("刷新"));
+    m_refreshButton->setObjectName(QStringLiteral("primaryButton"));
+    connect(m_refreshButton, &QPushButton::clicked,
+            m_scheduler, &RefreshScheduler::refreshAll);
+    auto *settingsButton = new QPushButton(QStringLiteral("设置"));
+    settingsButton->setObjectName(QStringLiteral("secondaryButton"));
+    connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettings);
+    header->addWidget(m_refreshButton);
+    header->addWidget(settingsButton);
+    rootLayout->addLayout(header);
+
+    // ---- 内容区：侧栏 + 卡片滚动区 ----
+    auto *content = new QHBoxLayout;
+    content->setSpacing(14);
+
+    auto *sidebarBox = new QVBoxLayout;
+    sidebarBox->setContentsMargins(0, 0, 0, 0);
+    sidebarBox->setSpacing(6);
+    auto *section = new QLabel(QStringLiteral("数据源"));
+    section->setObjectName(QStringLiteral("sidebarSection"));
+    sidebarBox->addWidget(section);
 
     m_sidebar = new QListWidget;
-    m_sidebar->setFixedWidth(150);
+    m_sidebar->setFixedWidth(172);
+    m_sidebar->setIconSize(QSize(12, 12));
     connect(m_sidebar, &QListWidget::currentRowChanged,
             this, [this](int) { relayoutCards(); });
-    rootLayout->addWidget(m_sidebar);
+    sidebarBox->addWidget(m_sidebar, 1);
+
+    auto *version = new QLabel(QStringLiteral("v%1 · 单机开源")
+                                   .arg(QApplication::applicationVersion()));
+    version->setObjectName(QStringLiteral("appHeaderSubtitle"));
+    sidebarBox->addWidget(version);
+    content->addLayout(sidebarBox);
 
     auto *scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
     auto *container = new QWidget;
     m_grid = new QGridLayout(container);
-    m_grid->setSpacing(12);
+    m_grid->setSpacing(14);
     scrollArea->setWidget(container);
-    rootLayout->addWidget(scrollArea, 1);
+    content->addWidget(scrollArea, 1);
 
+    rootLayout->addLayout(content, 1);
     setCentralWidget(central);
-    resize(1024, 640);
+    resize(1060, 680);
 }
 
 void MainWindow::rebuildDashboard()
@@ -124,12 +178,15 @@ void MainWindow::rebuildDashboard()
     m_sidebar->setCurrentRow(0);
     m_sidebar->blockSignals(false);
 
-    if (providers.isEmpty())
+    if (providers.isEmpty()) {
         m_grid->addWidget(new QLabel(QStringLiteral(
-            "没有启用的提供商。点右上角「设置」添加或启用。")), 0, 0);
-    else
+            "没有启用的数据源。点右上角「设置」添加或启用。")), 0, 0);
+    } else {
         relayoutCards();
+    }
 
+    updateHeader();
+    updateSidebarStatus();
     updateTraySummary();
 }
 
@@ -164,7 +221,41 @@ void MainWindow::onSnapshot(const ProviderSnapshot &snapshot)
     m_latest.insert(snapshot.providerId, snapshot);
     if (ProviderCard *card = m_cards.value(snapshot.providerId))
         card->updateSnapshot(snapshot);
+    updateHeader();
+    updateSidebarStatus();
     updateTraySummary();
+}
+
+void MainWindow::updateHeader()
+{
+    const int total = m_manager->providers().size();
+    QDateTime latest;
+    for (const ProviderSnapshot &snapshot : std::as_const(m_latest)) {
+        if (snapshot.fetchedAt > latest)
+            latest = snapshot.fetchedAt;
+    }
+    const QString timeText = latest.isValid()
+        ? latest.toString(QStringLiteral("HH:mm:ss"))
+        : QStringLiteral("—");
+    m_headerSubtitle->setText(QStringLiteral("共 %1 个数据源 · 最近更新 %2")
+                                  .arg(total).arg(timeText));
+}
+
+void MainWindow::updateSidebarStatus()
+{
+    for (int row = 1; row < m_sidebar->count(); ++row) {
+        QListWidgetItem *item = m_sidebar->item(row);
+        const QString id = item->data(Qt::UserRole).toString();
+        const ProviderSnapshot snapshot = m_latest.value(id);
+
+        QColor color = statusColorForPercent(-1);          // 无数据：灰
+        if (!snapshot.providerId.isEmpty()) {
+            color = snapshot.ok()
+                ? statusColorForPercent(snapshot.worstQuotaPercent())
+                : statusColorForPercent(1.0);              // 失败：红
+        }
+        item->setIcon(makeDotIcon(color));
+    }
 }
 
 void MainWindow::updateTraySummary()

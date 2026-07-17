@@ -11,6 +11,8 @@ class RefreshScheduler;
 class TrayIcon;
 class QListWidget;
 class QGridLayout;
+class QLabel;
+class QPushButton;
 
 class MainWindow : public QMainWindow
 {
@@ -28,13 +30,17 @@ private:
     void onSnapshot(const ProviderSnapshot &snapshot);
     void openSettings();
     void updateTraySummary();
-    void applyThemeToUi();     // 系统明暗切换后重刷全局样式和卡片
+    void updateHeader();         // 头部栏副标题（数据源数 + 最近更新）
+    void updateSidebarStatus();  // 侧栏每行状态点
+    void applyThemeToUi();       // 系统明暗切换后重刷全局样式和卡片
 
     ProviderManager *m_manager = nullptr;
     RefreshScheduler *m_scheduler = nullptr;
     TrayIcon *m_tray = nullptr;
     QListWidget *m_sidebar = nullptr;
     QGridLayout *m_grid = nullptr;
+    QLabel *m_headerSubtitle = nullptr;
+    QPushButton *m_refreshButton = nullptr;
 
     QHash<QString, ProviderCard *> m_cards;     // providerId -> 卡片
     QHash<QString, ProviderSnapshot> m_latest;  // providerId -> 最新快照

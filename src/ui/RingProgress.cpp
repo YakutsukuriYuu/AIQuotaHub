@@ -30,7 +30,7 @@ void RingProgress::paintEvent(QPaintEvent *event)
     painter.setRenderHint(QPainter::Antialiasing);
 
     const ThemePalette theme = Theme::current();
-    const int penWidth = 7;
+    const int penWidth = 6;
     const int side = qMin(width(), height());
     const QRectF rect((width() - side) / 2.0 + penWidth,
                       (height() - side) / 2.0 + penWidth,
@@ -51,7 +51,7 @@ void RingProgress::paintEvent(QPaintEvent *event)
     // 中心百分比
     QFont font = painter.font();
     font.setBold(true);
-    font.setPixelSize(15);
+    font.setPixelSize(16);
     painter.setFont(font);
     painter.setPen(theme.textPrimary);
     const QString centerText = m_percent < 0
@@ -63,7 +63,7 @@ void RingProgress::paintEvent(QPaintEvent *event)
     // 环内下方小字
     if (!m_subText.isEmpty()) {
         font.setBold(false);
-        font.setPixelSize(8);
+        font.setPixelSize(9);
         painter.setFont(font);
         painter.setPen(theme.textSecondary);
         painter.drawText(QRectF(rect.x(), rect.center().y() + 2,

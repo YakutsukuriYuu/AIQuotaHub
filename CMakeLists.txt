@@ -28,20 +28,20 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/core/CredentialStore.h
     src/providers/GlmParser.h
     src/providers/GlmParser.cpp
-    src/providers/GlmProvider.h
-    src/providers/GlmProvider.cpp
     src/providers/DeepSeekParser.h
     src/providers/DeepSeekParser.cpp
-    src/providers/DeepSeekProvider.h
-    src/providers/DeepSeekProvider.cpp
     src/providers/MoonshotParser.h
     src/providers/MoonshotParser.cpp
     src/providers/OpenAiCostsParser.h
     src/providers/OpenAiCostsParser.cpp
     src/providers/CustomJsonParser.h
     src/providers/CustomJsonParser.cpp
+    src/providers/HttpProvider.h
+    src/providers/HttpProvider.cpp
     src/providers/DemoProvider.h
     src/providers/DemoProvider.cpp
+    src/core/ProviderManager.h
+    src/core/ProviderManager.cpp
     src/core/RefreshScheduler.h
     src/core/RefreshScheduler.cpp
     src/ui/UiColors.h

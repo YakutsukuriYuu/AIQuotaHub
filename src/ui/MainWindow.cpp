@@ -1,14 +1,11 @@
 #include "MainWindow.h"
 
 #include "../core/Provider.h"
+#include "../core/ProviderManager.h"
 #include "../core/RefreshScheduler.h"
-#include "../providers/DemoProvider.h"
-#include "../providers/DeepSeekProvider.h"
-#include "../providers/GlmProvider.h"
 #include "ProviderCard.h"
 #include "SettingsDialog.h"
 #include "TrayIcon.h"
-#include "UiColors.h"
 
 #include <QAction>
 #include <QApplication>
@@ -22,36 +19,21 @@
 #include <QToolBar>
 #include <utility>
 
-namespace {
-
-Provider *createProvider(const ProviderConfig &config, QObject *parent)
-{
-    if (config.type == QStringLiteral("demo"))
-        return new DemoProvider(config, parent);
-    if (config.id == QStringLiteral("glm"))
-        return new GlmProvider(config, parent);
-    if (config.id == QStringLiteral("deepseek"))
-        return new DeepSeekProvider(config, parent);
-    qWarning() << "未知提供商，已跳过:" << config.id << config.type;
-    return nullptr;
-}
-
-} // namespace
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , m_manager(new ProviderManager(this))
     , m_scheduler(new RefreshScheduler(this))
 {
     setWindowTitle(QStringLiteral("AI Quota Hub"));
     setUnifiedTitleAndToolBarOnMac(true);
 
-    QString configError;
-    m_configs = ProvidersConfig::load(&configError);
-    if (!configError.isEmpty())
-        qWarning().noquote() << configError;
-
-    createProviders();
     buildUi();
+
+    connect(m_manager, &ProviderManager::providersChanged, this, [this] {
+        rebuildDashboard();
+        m_scheduler->refreshAll();
+    });
+    rebuildDashboard();
 
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
         m_tray = new TrayIcon(this);
@@ -64,7 +46,6 @@ MainWindow::MainWindow(QWidget *parent)
                 m_scheduler, &RefreshScheduler::refreshAll);
         m_tray->show();
     } else {
-        // 无托盘时关窗即退出，避免进程驻留无法退出
         QApplication::setQuitOnLastWindowClosed(true);
     }
 
@@ -72,21 +53,6 @@ MainWindow::MainWindow(QWidget *parent)
     restoreGeometry(settings.value(QStringLiteral("ui/geometry")).toByteArray());
 
     m_scheduler->refreshAll();
-}
-
-void MainWindow::createProviders()
-{
-    for (const ProviderConfig &config : std::as_const(m_configs)) {
-        if (!config.enabled)
-            continue;
-        Provider *provider = createProvider(config, this);
-        if (!provider)
-            continue;
-        m_providers.append(provider);
-        m_names.insert(config.id, config.name);
-        m_scheduler->addProvider(provider);
-        connect(provider, &Provider::finished, this, &MainWindow::onSnapshot);
-    }
 }
 
 void MainWindow::buildUi()
@@ -103,43 +69,62 @@ void MainWindow::buildUi()
     auto *rootLayout = new QHBoxLayout(central);
     rootLayout->setContentsMargins(8, 8, 8, 8);
 
-    // 侧栏：全部 + 每个提供商
     m_sidebar = new QListWidget;
     m_sidebar->setFixedWidth(150);
-    auto *allItem = new QListWidgetItem(QStringLiteral("全部"));
-    allItem->setData(Qt::UserRole, QString());   // 空 id = 不过滤
-    m_sidebar->addItem(allItem);
-    for (Provider *provider : m_providers)
-        m_sidebar->addItem(new QListWidgetItem(provider->displayName()));
-    for (int row = 1; row < m_sidebar->count(); ++row)
-        m_sidebar->item(row)->setData(Qt::UserRole, m_providers.at(row - 1)->id());
-    m_sidebar->setCurrentRow(0);
     connect(m_sidebar, &QListWidget::currentRowChanged,
             this, [this](int) { relayoutCards(); });
     rootLayout->addWidget(m_sidebar);
 
-    // 卡片滚动区
     auto *scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
     auto *container = new QWidget;
     m_grid = new QGridLayout(container);
     m_grid->setSpacing(12);
-
-    if (m_providers.isEmpty()) {
-        m_grid->addWidget(new QLabel(QStringLiteral(
-            "没有可用的提供商。请检查 providers.json 配置。")), 0, 0);
-    } else {
-        for (Provider *provider : m_providers) {
-            auto *card = new ProviderCard(provider->displayName());
-            m_cards.insert(provider->id(), card);
-        }
-        relayoutCards();
-    }
-
     scrollArea->setWidget(container);
     rootLayout->addWidget(scrollArea, 1);
+
     setCentralWidget(central);
     resize(1024, 640);
+}
+
+void MainWindow::rebuildDashboard()
+{
+    // 旧 Provider 实例由 ProviderManager 销毁；
+    // RefreshScheduler 通过 destroyed 信号自动摘除，无需手动清理
+    while (QLayoutItem *item = m_grid->takeAt(0))
+        delete item;
+    qDeleteAll(m_cards);
+    m_cards.clear();
+    m_latest.clear();
+
+    const auto &providers = m_manager->providers();
+    for (Provider *provider : providers) {
+        auto *card = new ProviderCard(provider->displayName());
+        m_cards.insert(provider->id(), card);
+        m_scheduler->addProvider(provider);
+        connect(provider, &Provider::finished, this, &MainWindow::onSnapshot);
+    }
+
+    m_sidebar->blockSignals(true);
+    m_sidebar->clear();
+    auto *allItem = new QListWidgetItem(QStringLiteral("全部"));
+    allItem->setData(Qt::UserRole, QString());
+    m_sidebar->addItem(allItem);
+    for (Provider *provider : providers) {
+        auto *item = new QListWidgetItem(provider->displayName());
+        item->setData(Qt::UserRole, provider->id());
+        m_sidebar->addItem(item);
+    }
+    m_sidebar->setCurrentRow(0);
+    m_sidebar->blockSignals(false);
+
+    if (providers.isEmpty())
+        m_grid->addWidget(new QLabel(QStringLiteral(
+            "没有启用的提供商。点右上角「设置」添加或启用。")), 0, 0);
+    else
+        relayoutCards();
+
+    updateTraySummary();
 }
 
 void MainWindow::relayoutCards()
@@ -156,7 +141,7 @@ void MainWindow::relayoutCards()
         filter = item->data(Qt::UserRole).toString();
 
     int index = 0;
-    for (Provider *provider : m_providers) {
+    for (Provider *provider : m_manager->providers()) {
         if (!filter.isEmpty() && provider->id() != filter)
             continue;
         ProviderCard *card = m_cards.value(provider->id());
@@ -183,12 +168,12 @@ void MainWindow::updateTraySummary()
 
     double worst = -1.0;
     QStringList lines;
-    for (Provider *provider : m_providers) {
+    for (Provider *provider : m_manager->providers()) {
         const ProviderSnapshot snapshot = m_latest.value(provider->id());
         if (snapshot.providerId.isEmpty())
             continue;
 
-        const QString name = m_names.value(provider->id());
+        const QString name = m_manager->configFor(provider->id()).name;
         if (!snapshot.ok()) {
             lines.append(name + QStringLiteral("：抓取失败"));
             continue;
@@ -208,7 +193,7 @@ void MainWindow::updateTraySummary()
 
 void MainWindow::openSettings()
 {
-    SettingsDialog dialog(m_configs, this);
+    SettingsDialog dialog(m_manager->configs(), this);
     dialog.exec();
     m_scheduler->refreshAll();   // Key 可能变了，立即重刷
 }

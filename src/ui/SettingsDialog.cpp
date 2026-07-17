@@ -36,8 +36,8 @@ SettingsDialog::SettingsDialog(const QVector<ProviderConfig> &configs, QWidget *
     layout->addLayout(form);
 
     auto *note = new QLabel(QStringLiteral("API Key 保存在 macOS 钥匙串，不会写入任何文件。\n"
-                                           "接口配置生效路径：%1")
-                                .arg(ProvidersConfig::resolvedPath()));
+                                           "用户自定义配置：%1")
+                                .arg(ProvidersConfig::userFilePath()));
     note->setWordWrap(true);
     note->setObjectName(QStringLiteral("muted"));
     layout->addWidget(note);

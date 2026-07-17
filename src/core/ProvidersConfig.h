@@ -6,7 +6,7 @@
 
 // 单个提供商的运行配置（来自 providers.json）
 struct ProviderConfig {
-    QString id;                 // "glm"
+    QString id;                 // "glm"；用户自建源用 "user-xxx"
     QString name;               // "GLM 智谱"
     QString type;               // "http"（默认）/ "demo"
     bool enabled = true;
@@ -26,12 +26,15 @@ struct ProviderConfig {
 class ProvidersConfig
 {
 public:
-    // 加载优先级：$AIQUOTAHUB_PROVIDERS_JSON
-    //   > ~/Library/Application Support/AIQuotaHub/providers.json（用户覆盖）
-    //   > App 包内 Resources/providers.json（随包默认）
+    // 合并加载：内置（App 包 Resources）为基底，用户层文件按 id 覆盖/追加。
+    // $AIQUOTAHUB_PROVIDERS_JSON 存在时整体替换（调试用）。
     static QVector<ProviderConfig> load(QString *errorMessage = nullptr);
-    static QString resolvedPath();
 
-private:
+    // 用户层文件（可写）：~/Library/Application Support/AIQuotaHub/providers.json
+    static QString userFilePath();
+    static bool saveUserConfigs(const QVector<ProviderConfig> &configs,
+                                QString *errorMessage = nullptr);
+
+    static QJsonObject entryToJson(const ProviderConfig &config);
     static ProviderConfig parseEntry(const QJsonObject &object);
 };

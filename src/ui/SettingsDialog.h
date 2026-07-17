@@ -3,22 +3,30 @@
 #include "../core/ProvidersConfig.h"
 
 #include <QDialog>
-#include <QHash>
 
-class QLineEdit;
+class ProviderManager;
+class QVBoxLayout;
 class QLabel;
+class QLineEdit;
 
-// 设置对话框：录入各提供商 API Key，写入 macOS 钥匙串
+// 提供商管理页：增删改、启停、API Key 管理（即时生效）
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit SettingsDialog(const QVector<ProviderConfig> &configs, QWidget *parent = nullptr);
+    explicit SettingsDialog(ProviderManager *manager, QWidget *parent = nullptr);
+
+signals:
+    void credentialsChanged();   // 有 Key 更新（主窗口触发立即重刷）
 
 private:
-    void saveAll();
+    void rebuildRows();
+    QWidget *buildRow(const ProviderConfig &config);
+    void addProvider();
+    void editProvider(const ProviderConfig &config);
+    void saveKey(const ProviderConfig &config, QLineEdit *edit);
 
-    QVector<ProviderConfig> m_configs;
-    QHash<QString, QLineEdit *> m_keyEdits;   // providerId -> 输入框
+    ProviderManager *m_manager;
+    QVBoxLayout *m_rowsLayout = nullptr;
     QLabel *m_statusLabel = nullptr;
 };

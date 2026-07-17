@@ -51,6 +51,8 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/ui/MainWindow.cpp
     src/ui/SettingsDialog.h
     src/ui/SettingsDialog.cpp
+    src/ui/AddProviderDialog.h
+    src/ui/AddProviderDialog.cpp
     src/ui/TrayIcon.h
     src/ui/TrayIcon.cpp
 )

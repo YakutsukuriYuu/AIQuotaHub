@@ -34,6 +34,16 @@ QVector<QPair<QString, QString>> HttpProvider::availableTemplates()
     };
 }
 
+QString HttpProvider::templateDisplayName(const QString &parserTemplate)
+{
+    const auto templates = availableTemplates();
+    for (const auto &pair : templates) {
+        if (pair.first == parserTemplate)
+            return pair.second;
+    }
+    return parserTemplate.isEmpty() ? QStringLiteral("未指定") : parserTemplate;
+}
+
 QString HttpProvider::resolvedEndpoint() const
 {
     QString endpoint = m_config.endpoint;

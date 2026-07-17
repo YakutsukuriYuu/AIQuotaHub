@@ -193,9 +193,10 @@ void MainWindow::updateTraySummary()
 
 void MainWindow::openSettings()
 {
-    SettingsDialog dialog(m_manager->configs(), this);
-    dialog.exec();
-    m_scheduler->refreshAll();   // Key 可能变了，立即重刷
+    SettingsDialog dialog(m_manager, this);
+    connect(&dialog, &SettingsDialog::credentialsChanged,
+            m_scheduler, &RefreshScheduler::refreshAll);
+    dialog.exec();   // 增删改/启停由 ProviderManager 即时生效，无需收尾处理
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

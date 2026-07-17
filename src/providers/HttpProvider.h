@@ -25,6 +25,7 @@ public:
 
     // 模板注册表：(模板标识, 展示说明)，设置页下拉用
     static QVector<QPair<QString, QString>> availableTemplates();
+    static QString templateDisplayName(const QString &parserTemplate);
 
 private:
     QString resolvedEndpoint() const;              // 替换 {month_start} 等占位符

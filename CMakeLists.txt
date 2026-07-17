@@ -34,6 +34,12 @@ qt_add_executable(AIQuotaHub MACOSX_BUNDLE
     src/providers/DeepSeekParser.cpp
     src/providers/DeepSeekProvider.h
     src/providers/DeepSeekProvider.cpp
+    src/providers/MoonshotParser.h
+    src/providers/MoonshotParser.cpp
+    src/providers/OpenAiCostsParser.h
+    src/providers/OpenAiCostsParser.cpp
+    src/providers/CustomJsonParser.h
+    src/providers/CustomJsonParser.cpp
     src/providers/DemoProvider.h
     src/providers/DemoProvider.cpp
     src/core/RefreshScheduler.h

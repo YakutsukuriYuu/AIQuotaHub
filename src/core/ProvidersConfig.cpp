@@ -83,6 +83,9 @@ ProviderConfig ProvidersConfig::parseEntry(const QJsonObject &object)
         object.value(QStringLiteral("refreshIntervalSec")).toInt(120);
     config.supportsQuota = object.value(QStringLiteral("supportsQuota")).toBool(false);
     config.supportsApiUsage = object.value(QStringLiteral("supportsApiUsage")).toBool(false);
+    config.parserTemplate = object.value(QStringLiteral("parserTemplate")).toString();
+    config.source = object.value(QStringLiteral("source"))
+                        .toString(QStringLiteral("builtin"));
     config.fields = object.value(QStringLiteral("fields")).toObject();
     return config;
 }

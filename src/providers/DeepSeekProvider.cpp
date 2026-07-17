@@ -36,6 +36,6 @@ void DeepSeekProvider::fetch()
             emit finished(snapshot);
             return;
         }
-        emit finished(parseDeepSeekBalance(doc.toJson()));
+        emit finished(parseDeepSeekBalance(doc.toJson(), m_config.id));
     });
 }

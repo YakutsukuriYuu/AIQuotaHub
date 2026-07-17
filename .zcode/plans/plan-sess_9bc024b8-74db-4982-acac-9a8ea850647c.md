@@ -1,80 +1,64 @@
-# AI Quota Hub — 第一迭代实施计划（M1+M2：可运行的仪表盘，git 全程管理）
+# v0.2 迭代计划：自定义提供商 + 动态 UI + 明暗双主题美化
 
-## 交付目标
+## 目标（对应你的三个问题）
 
-在当前空目录 `/Users/yakutsukuriyuu/Documents/zcode/qt` 下从零构建 **macOS 原生 Qt Widgets 应用 `AIQuotaHub.app`**，目录即项目根并初始化为 git 仓库：
+1. **自定义 URL + Key**：提供商不再写死，用户可添加任意 HTTP 数据源
+2. **界面动态化**：运行期增删改/启停提供商，卡片自动重建
+3. **美化**：跟随 macOS 系统明暗的双主题 + 卡片重设计（自绘圆环进度）
 
-- 卡片式仪表盘：每卡片显示 5小时额度 / 周额度进度条 + 重置时间 + API 余额，按用量着色（<60% 绿 / 60–85% 黄 / >85% 红 / 失败灰）
-- 真实数据源：**GLM 智谱**（官方配额 API）+ **DeepSeek**（官方余额 API）两个适配器
-- **Demo 适配器**：生成模拟数据，无 API Key 也能看到完整界面效果
-- 菜单栏托盘图标（显示最紧张的额度）+ 手动/定时自动刷新（失败指数退避）
-- 设置对话框：填 API Key，存 **macOS 钥匙串**（不落盘明文）
-- 解析逻辑带 **Qt Test 单元测试**（真实响应样例做夹具，不依赖网络和真 Key）
+## 一、解析模板化（解决问题 1 的核心）
 
-不在本轮（后续里程碑）：Kimi/OpenAI/Claude 适配器、SQLite 历史 + Qt Charts 趋势详情页、macdeployqt 打包、NetworkAuth（需 MaintenanceTool 补装）。
+`ProviderConfig` 扩展：
+- `parserTemplate`：`glm_quota` / `deepseek_balance` / `moonshot_balance` / `openai_costs` / `custom_json`
+- `source`：`builtin`（可停用、可改 Key，不可删）/ `user`（可删改）
+- `fields`：custom_json 时存字段路径映射；模板型时作高级覆盖
 
-## git 管理策略
+新增解析器（均为纯函数 + 单测夹具）：
+- **MoonshotParser**：`GET /v1/users/me/balance` → `data.available_balance`（Kimi）
+- **OpenAiCostsParser**：`GET /v1/organization/costs` 聚合当月 bucket → "本月花费"（需 Admin Key）；endpoint 支持 `{month_start}` 占位符，fetch 时替换为当月 1 号时间戳
+- **CustomJsonParser**：按用户填的路径映射解析（quotasArray / used / limit / reset / balance 路径）
 
-- **P0 第一步先 `git init`**，后续每个阶段完成即提交，共 4 次里程碑提交：
-  1. `chore: 项目骨架（CMake/presets/gitignore/空窗口）`
-  2. `feat(core): 数据模型 + HTTP 客户端 + GLM/DeepSeek 解析（测试全绿）`
-  3. `feat(ui): 仪表盘卡片 + 托盘 + 设置页 + 钥匙串`
-  4. `docs: README 构建运行说明`（含最终验证后修正）
-- `.gitignore`：`build/`、`*.user`、`.DS_Store`、`.qtcreator/`、macOS 无关产物
-- 只提交，不关联远程、不 push
+`HttpProvider` 通用化：一个类按模板绑定解析函数，**吸收并删除** GlmProvider/DeepSeekProvider；工厂简化为 `type: demo | http`。内置 providers.json 补全 glm / deepseek / kimi / openai 四个模板源 + demo。
 
-## 技术要点
+## 二、提供商管理（解决问题 2）
 
-- Qt 6.11.1，模块：Core / Gui / Widgets / Network / Test（Charts、Sql 后续里程碑再加）
-- CMake + Ninja，用 Qt 自带工具链绝对路径；**CMakePresets.json** 固化配置
-- endpoint、认证头、JSON 字段路径写进 `resources/providers.json` → 接口变动改配置不重编译
-- 解析函数写成纯函数（QByteArray → Model），与网络层分离，可单测
+- 新增 `ProviderManager`（core）：持有生效配置 → 持久化用户层 JSON（`~/Library/Application Support/AIQuotaHub/providers.json`，与内置合并、同 id 覆盖）→ 重建 Provider 实例 → 发 `providersChanged()`
+- 设置对话框重构为**提供商管理页**：每行一个提供商（名称、模板、启用开关、Key 状态、编辑/删除）；「添加提供商」对话框：名称、模板下拉（带说明）、URL（按模板预填）、API Key（入钥匙串）、刷新间隔、**高级折叠区**（字段路径映射）
+- MainWindow 监听 `providersChanged()` → 重建卡片/侧栏/调度器
 
-## 文件清单（约 23 个文件）
+## 三、美化：跟随系统明暗（解决问题 3）
 
-```
-.gitignore
-CMakeLists.txt                    # MACOSX_BUNDLE，find_package(Qt6 Widgets Network Test)
-CMakePresets.json                 # 固化 Ninja/Qt 路径
-README.md
-resources/providers.json          # GLM/DeepSeek 端点+字段映射
-resources/fixtures/*.json         # 测试夹具（GLM配额、DeepSeek余额真实响应样例）
-src/main.cpp
-src/core/
-  Models.h/.cpp                   # QuotaWindow(5h/Weekly) / ApiUsage / ProviderSnapshot
-  Provider.h/.cpp                 # 抽象接口 + 注册表
-  HttpJsonClient.h/.cpp           # QNAM 异步 GET + Bearer + JSON
-  ProvidersConfig.h/.cpp          # 加载 providers.json
-  RefreshScheduler.h/.cpp         # QTimer 定时 + 失败退避(×2, 上限15min)
-  CredentialStore.h/.cpp          # Security framework 钥匙串封装
-src/providers/
-  GlmProvider.h/.cpp
-  DeepSeekProvider.h/.cpp
-  DemoProvider.h/.cpp             # 模拟数据
-src/ui/
-  MainWindow.h/.cpp               # 侧栏 + 卡片滚动区
-  ProviderCard.h/.cpp             # 进度条/余额/状态色
-  SettingsDialog.h/.cpp           # Key 录入 → 钥匙串
-  TrayIcon.h/.cpp
-tests/
-  CMakeLists.txt
-  test_parsers.cpp
-```
+- 新增 `Theme` 模块：深/浅两套调色板 token；`QStyleHints::colorScheme()` 检测 + `colorSchemeChanged` 实时切换；生成全套 QSS（窗口/工具栏/列表/对话框/输入框/按钮/滚动区/菜单）
+- 新增 `RingProgress` 自绘控件：圆环弧 + 中心大数字百分比（QPainter 抗锯齿，状态色驱动）
+- `ProviderCard` 重设计：左侧 4px 状态色条 + 双圆环（5h/周）+ 重置时间 + 余额行 + hover 提亮 + 失败灰化
+- 托盘图标颜色改取 Theme 状态色
 
-## 实施顺序（与提交对应）
+## 文件变动
 
-1. **P0**：git init → CMakeLists + presets + .gitignore + 空窗口 → 编译通过 → **提交①**
-2. **P1**：Models → HttpJsonClient → GLM/DeepSeek 解析 → **ctest 全绿** → **提交②**
-3. **P2**：ProviderCard → MainWindow → Scheduler → SettingsDialog + 钥匙串 → TrayIcon → **提交③**
-4. **P3**：完整构建 → ctest → offscreen 冒烟启动 → README → **提交④**
+| 新增 | 删除 | 大改 |
+|---|---|---|
+| MoonshotParser / OpenAiCostsParser / CustomJsonParser (h+cpp) | GlmProvider (h+cpp) | SettingsDialog（→提供商管理）|
+| HttpProvider (h+cpp) | DeepSeekProvider (h+cpp) | ProviderCard（圆环重设计）|
+| ProviderManager (h+cpp) | | MainWindow（动态重建）|
+| Theme / RingProgress (h+cpp) | | providers.json（模板字段+新源）|
+| AddProviderDialog (h+cpp) | | README |
+| fixtures: kimi_balance / openai_costs | | |
 
-## 验证命令
+## 实施顺序（5 次提交）
 
-- `~/Qt/Tools/CMake/CMake.app/Contents/bin/cmake --preset default` + `cmake --build --preset default`
-- `ctest --test-dir build`
-- `QT_QPA_PLATFORM=offscreen ./build/AIQuotaHub.app/Contents/MacOS/AIQuotaHub` 冒烟（数秒后主动结束）
+1. `feat(parsers): 解析模板化 + Kimi/OpenAI/自定义JSON 解析器`——先写解析器和单测，ctest 绿
+2. `feat(core): HttpProvider 通用化 + ProviderManager + 用户层持久化`——编译绿
+3. `feat(ui): 提供商管理页（运行期增删改启停）`——编译绿
+4. `feat(theme): 明暗双主题 + 圆环进度卡片重设计`——编译零警告
+5. `docs: README v0.2`——ctest 全绿 + offscreen 冒烟后提交
 
-## 你需要知道的
+## 验证
 
-- 构建、提交全程无需你操作；跑真实数据需在 app 设置页填 GLM/DeepSeek 的 API Key（没有也不影响构建和 Demo 演示）
-- git 只做本地提交；要关联 GitHub/Gitee 远程仓库的话随时说
+- 步骤 1 后 ctest（新增 6+ 解析用例）；步骤 5 前完整 ctest + offscreen 冒烟 6 秒
+- **推送到 GitHub**：等你在 https://github.com/settings/ssh/new 注册公钥后告诉我，我把 4+5 个提交一起推上去
+
+## 边界说明
+
+- 用户自定义源只保证"模板匹配"的响应能解析；字段漂移靠高级覆盖的路径映射兜底
+- OpenAI 模板需要 Admin API Key（普通 sk- key 无权限查 costs），设置页会注明
+- 卡片拖拽排序、图标头像不在本轮（如需下轮加）

@@ -6,10 +6,11 @@
 #include <QJsonDocument>
 #include <QJsonParseError>
 
-ProviderSnapshot parseGlmQuotaResponse(const QByteArray &body, const QJsonObject &fields)
+ProviderSnapshot parseGlmQuotaResponse(const QByteArray &body, const QJsonObject &fields,
+                                       const QString &providerId)
 {
     ProviderSnapshot snapshot;
-    snapshot.providerId = QStringLiteral("glm");
+    snapshot.providerId = providerId;
     snapshot.fetchedAt = QDateTime::currentDateTime();
 
     QJsonParseError parseError{};

@@ -36,6 +36,6 @@ void GlmProvider::fetch()
             emit finished(snapshot);
             return;
         }
-        emit finished(parseGlmQuotaResponse(doc.toJson(), m_config.fields));
+        emit finished(parseGlmQuotaResponse(doc.toJson(), m_config.fields, m_config.id));
     });
 }

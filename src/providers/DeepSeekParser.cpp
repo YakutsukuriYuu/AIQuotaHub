@@ -5,10 +5,10 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
-ProviderSnapshot parseDeepSeekBalance(const QByteArray &body)
+ProviderSnapshot parseDeepSeekBalance(const QByteArray &body, const QString &providerId)
 {
     ProviderSnapshot snapshot;
-    snapshot.providerId = QStringLiteral("deepseek");
+    snapshot.providerId = providerId;
     snapshot.fetchedAt = QDateTime::currentDateTime();
 
     QJsonParseError parseError{};

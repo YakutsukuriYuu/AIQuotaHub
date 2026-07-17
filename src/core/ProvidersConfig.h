@@ -17,6 +17,9 @@ struct ProviderConfig {
     int refreshIntervalSec = 120;
     bool supportsQuota = false;
     bool supportsApiUsage = false;
+    QString parserTemplate;     // glm_quota / deepseek_balance / moonshot_balance
+                                // / openai_costs / custom_json
+    QString source;             // "builtin"（随包）/ "user"（用户自建）
     QJsonObject fields;         // 字段路径覆盖（透传给解析器）
 };
 

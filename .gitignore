@@ -1,0 +1,14 @@
+# 构建产物
+build/
+*.user
+CMakeLists.txt.user*
+
+# Qt Creator
+.qtcreator/
+
+# macOS
+.DS_Store
+
+# 本地凭据/覆盖配置（永不上库）
+*.local
+secrets.json
